@@ -4,10 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -50,7 +53,7 @@ namespace ChromeAutomation
         [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
         public static extern int GetCursorPos(ref Form1.POINTAPI lpPoint);
 
-        public delegate void RS_DATA_CALLBACK(int left, int top, int width, int height);
+        public delegate void RS_DATA_CALLBACK(int left, int top, int width, int height, Dictionary<string, object> dictionary);
 
         private static RS_DATA_CALLBACK MessageCallback = null;
 
@@ -83,11 +86,24 @@ namespace ChromeAutomation
                         int top = iHTML.top;
                         int width = iHTML.width;
                         int height = iHTML.height;
-                        MessageCallback(left, top, width, height);
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("id", iHTML.id);
+                        dictionary.Add("tag", iHTML.tag);
+                        dictionary.Add("text", iHTML.text);
+                        dictionary.Add("value", iHTML.value);
+                        dictionary.Add("xpath", iHTML.xpath);
+                        dictionary.Add("full_xpath", iHTML.full_xpath);
+                        MessageCallback(left, top, width, height, dictionary);
                     }
                     catch (Exception)
                     {
                     }
+                    bool flag2 = ((int)Form1.GetAsyncKeyState(17) & 32768) != 0;
+                    if (flag2)
+                    {
+                        Application.Exit();
+                    }
+                    
                 }
                 else if(jo.ContainsKey("event") && jo["event"].ToString().Equals("CHECK"))
                 {
@@ -138,7 +154,9 @@ namespace ChromeAutomation
 
         private int left = 0, top = 0, width = 0, height = 0;
 
-        public void DrawRect(int left, int top, int width, int height)
+        Dictionary<string, object> dictionary;
+
+        public void DrawRect(int left, int top, int width, int height, Dictionary<string, object> dictionary)
         {
             /*Graphics graphics = this.CreateGraphics();
             Pen mypen = new Pen(Color.Red, 3);//设置画笔属性
@@ -156,7 +174,7 @@ namespace ChromeAutomation
             this.top = top;
             this.width = width;
             this.height = height;
-            
+            this.dictionary = dictionary;
         }
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never), AccessedThroughProperty("Timer1"), CompilerGenerated]
@@ -212,6 +230,61 @@ namespace ChromeAutomation
 
         private int PreviousPen;
 
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        public static extern int RegisterHotKey(int hwnd, int id, int fsModifiers, int vk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        public static extern int UnregisterHotKey(int hwnd, int id);
+
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        public static extern short GetAsyncKeyState(int vKey);
+
+        private KeyEventHandler myKeyEventHandeler = null;//按键钩子
+        private KeyboardHook k_hook = new KeyboardHook();
+
+        private void hook_KeyDown(object sender, KeyEventArgs e)
+        {
+            //  这里写具体实现
+            Console.WriteLine("按下按键" + e.KeyValue);
+            if (e.KeyValue == 162)
+            {
+                try
+                {
+                    string url = "http://localhost:63361/postChromeData";
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+                    req.Method = "POST";
+                    req.Timeout = 4000;//设置请求超时时间，单位为毫秒
+                    req.ContentType = "application/json";
+                    byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this.dictionary));
+                    req.ContentLength = data.Length;
+                    using (Stream reqStream = req.GetRequestStream())
+                    {
+                        reqStream.Write(data, 0, data.Length);
+                        reqStream.Close();
+                        // 关闭
+                        this.Close();
+                        Application.Exit();
+                    }
+                }
+                catch (Exception)
+                {
+                    // 关闭
+                    this.Close();
+                    Application.Exit();
+                }
+            }
+        }
+
+        public void stopListen()
+        {
+            if (myKeyEventHandeler != null)
+            {
+                k_hook.KeyDownEvent -= myKeyEventHandeler;//取消按键事件
+                myKeyEventHandeler = null;
+                k_hook.Stop();//关闭键盘钩子
+            }
+        }
+
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
@@ -225,12 +298,24 @@ namespace ChromeAutomation
             Form1.SetROP2(this.hDC, 10);
             this.Timer1 = new System.Windows.Forms.Timer(this.components);
             this.Timer1.Start();
+            base.Name = "CINDATA AUTOMATION";
+            base.ClientSize = new System.Drawing.Size(200, 30);
+            base.StartPosition = FormStartPosition.Manual;
+            Rectangle rect = Screen.GetWorkingArea(this);
+            System.Drawing.Point p = new System.Drawing.Point(rect.Width - 250, rect.Height - 40);
+            this.Location = p;
+            this.TopMost = true;
+            this.ControlBox = false;
             // websocket
             WebSocketServer webSocketServer = new WebSocketServer("ws://127.0.0.1:63360");
             string uri = "/chrome";
             webSocketServer.AddWebSocketService<SocketBehavior>(uri);
             webSocketServer.Start();
             RegisterMessageCallback(new RS_DATA_CALLBACK(this.DrawRect));
+
+            myKeyEventHandeler = new KeyEventHandler(hook_KeyDown);
+            k_hook.KeyDownEvent += myKeyEventHandeler;//钩住键按下
+            k_hook.Start();//安装键盘钩子
         }
 
         #endregion
