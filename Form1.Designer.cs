@@ -56,9 +56,17 @@ namespace ChromeAutomation
         [DllImport("user32.dll")]
         internal static extern bool GetPhysicalCursorPos(ref ChromeAutomation.CursorPoint lpPoint);
 
+        [DllImport("user32.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr WindowFromPoint(System.Windows.Point point);
+
+        [DllImport("user32.dll")]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
         public delegate void RS_DATA_CALLBACK(int left, int top, int width, int height, Dictionary<string, object> dictionary);
 
         private static RS_DATA_CALLBACK MessageCallback = null;
+
+        private static AutomationElement selectedElement = null;
 
         public static Form1.SocketBehavior CureentSocketBehavior = null;
 
@@ -129,12 +137,19 @@ namespace ChromeAutomation
                             });
                     // Console.WriteLine("发送消息给客户端:" + JsonConvert.SerializeObject(dictionary));
                     SendMessage(JsonConvert.SerializeObject(dictionary));*/
-                    System.Drawing.Point point = new System.Drawing.Point(-1, -1);
+                    /*System.Drawing.Point point = new System.Drawing.Point(-1, -1);
                     ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
                     Form1.GetPhysicalCursorPos(ref cursorPoint);
                     System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
                     Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
                     bool flag4 = CureentSocketBehavior != null;
+                    System.Windows.Point point3 = new System.Windows.Point((double)point2.X, (double)point2.Y);
+                    Form1.selectedElement = AutomationElement.FromPoint(point3);
+                    AutomationElement.AutomationElementInformation current = Form1.selectedElement.Current;
+                    IntPtr hWnd = Form1.WindowFromPoint(point3);
+                    StringBuilder stringBuilder = new StringBuilder(256);
+                    Form1.GetClassName(hWnd, stringBuilder, stringBuilder.Capacity);
+                    AutomationElement.AutomationElementInformation current2 = Form1.selectedElement.Current;
                     Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
                     if (flag4)
                     {
@@ -155,7 +170,7 @@ namespace ChromeAutomation
                             });
                         Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
                         SendMessage(JsonConvert.SerializeObject(dictionary));
-                    }
+                    }*/
                 }
             }
 
@@ -323,14 +338,21 @@ namespace ChromeAutomation
 
         private void RealMousePosition()
         {
-            System.Drawing.Point point = new System.Drawing.Point(-1, -1);
             while (true)
             {
+                System.Drawing.Point point = new System.Drawing.Point(-1, -1);
                 ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
                 Form1.GetPhysicalCursorPos(ref cursorPoint);
                 System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
                 Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
-                bool flag4 = CureentSocketBehavior != null;
+                bool flag4 = Form1.CureentSocketBehavior != null;
+                System.Windows.Point point3 = new System.Windows.Point((double)point2.X, (double)point2.Y);
+                Form1.selectedElement = AutomationElement.FromPoint(point3);
+                AutomationElement.AutomationElementInformation current = Form1.selectedElement.Current;
+                IntPtr hWnd = Form1.WindowFromPoint(point3);
+                StringBuilder stringBuilder = new StringBuilder(256);
+                Form1.GetClassName(hWnd, stringBuilder, stringBuilder.Capacity);
+                AutomationElement.AutomationElementInformation current2 = Form1.selectedElement.Current;
                 Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
                 if (flag4)
                 {
@@ -378,9 +400,7 @@ namespace ChromeAutomation
             this.TopMost = true;
             this.ControlBox = false;
 
-            this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
-            this.selectThread.IsBackground = true;
-            this.selectThread.Start();
+            
             // websocket
             WebSocketServer webSocketServer = new WebSocketServer("ws://127.0.0.1:63360");
             string uri = "/chrome";
@@ -391,6 +411,10 @@ namespace ChromeAutomation
             myKeyEventHandeler = new KeyEventHandler(hook_KeyDown);
             k_hook.KeyDownEvent += myKeyEventHandeler;//钩住键按下
             k_hook.Start();//安装键盘钩子
+
+            this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
+            this.selectThread.IsBackground = true;
+            this.selectThread.Start();
         }
 
         #endregion
