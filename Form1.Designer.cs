@@ -95,7 +95,7 @@ namespace ChromeAutomation
                     Console.WriteLine("来自客户端的xpath消息:" + e.Data.ToString());
                     try
                     {
-                        IHTML iHTML = JsonConvert.DeserializeObject<IHTML>(jo["data"].ToString());
+                        IHTML iHTML = JsonConvert.DeserializeObject<IHTML>(e.Data.ToString());
                         int left = iHTML.left;
                         int top = iHTML.top;
                         int width = iHTML.width;
@@ -171,6 +171,40 @@ namespace ChromeAutomation
                         Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
                         SendMessage(JsonConvert.SerializeObject(dictionary));
                     }*/
+                    System.Drawing.Point point = new System.Drawing.Point(-1, -1);
+                    ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
+                    Form1.GetPhysicalCursorPos(ref cursorPoint);
+                    System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
+                    Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
+                    bool flag4 = Form1.CureentSocketBehavior != null;
+                    System.Windows.Point point3 = new System.Windows.Point((double)point2.X, (double)point2.Y);
+                    Form1.selectedElement = AutomationElement.FromPoint(point3);
+                    AutomationElement.AutomationElementInformation current = Form1.selectedElement.Current;
+                    IntPtr hWnd = Form1.WindowFromPoint(point3);
+                    StringBuilder stringBuilder = new StringBuilder(256);
+                    Form1.GetClassName(hWnd, stringBuilder, stringBuilder.Capacity);
+                    AutomationElement.AutomationElementInformation current2 = Form1.selectedElement.Current;
+                    Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
+                    if (flag4)
+                    {
+                        int x = point2.X;
+                        int y = point2.Y;
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("event", "UI");
+                        dictionary.Add("data", new Dictionary<string, object>
+                            {
+                                {
+                                    "x",
+                                    x
+                                },
+                                {
+                                    "y",
+                                    y
+                                }
+                            });
+                        Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
+                        SendMessage(JsonConvert.SerializeObject(dictionary));
+                    }
                 }
             }
 
@@ -320,6 +354,11 @@ namespace ChromeAutomation
                     this.Close();
                     Application.Exit();
                 }
+            }else if (e.KeyValue == 27)
+            {
+                // 关闭
+                this.Close();
+                Application.Exit();
             }
         }
 
@@ -400,7 +439,6 @@ namespace ChromeAutomation
             this.TopMost = true;
             this.ControlBox = false;
 
-            
             // websocket
             WebSocketServer webSocketServer = new WebSocketServer("ws://127.0.0.1:63360");
             string uri = "/chrome";
@@ -412,9 +450,9 @@ namespace ChromeAutomation
             k_hook.KeyDownEvent += myKeyEventHandeler;//钩住键按下
             k_hook.Start();//安装键盘钩子
 
-            this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
+            /*this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
             this.selectThread.IsBackground = true;
-            this.selectThread.Start();
+            this.selectThread.Start();*/
         }
 
         #endregion
