@@ -10,12 +10,19 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Automation;
 using System.Windows.Forms;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
 namespace ChromeAutomation
 {
+    public struct CursorPoint
+    {
+        public int X;
+
+        public int Y;
+    }
     partial class Form1
     {
 
@@ -43,19 +50,17 @@ namespace ChromeAutomation
         [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
         public static extern int ReleaseCapture();
 
-        public struct POINTAPI
-        {
-            public int x;
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
 
-            public int y;
-        }
-
-        [DllImport("user32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
-        public static extern int GetCursorPos(ref Form1.POINTAPI lpPoint);
+        [DllImport("user32.dll")]
+        internal static extern bool GetPhysicalCursorPos(ref ChromeAutomation.CursorPoint lpPoint);
 
         public delegate void RS_DATA_CALLBACK(int left, int top, int width, int height, Dictionary<string, object> dictionary);
 
         private static RS_DATA_CALLBACK MessageCallback = null;
+
+        public static Form1.SocketBehavior CureentSocketBehavior = null;
 
         public static void RegisterMessageCallback(RS_DATA_CALLBACK callback)
         {
@@ -67,6 +72,7 @@ namespace ChromeAutomation
             {
                 base.OnOpen();
                 Console.WriteLine("WebSocket OnOpen");
+                Form1.CureentSocketBehavior = this;
                 Send("{\"event\":\"UI\"}");
             }
 
@@ -107,7 +113,7 @@ namespace ChromeAutomation
                 }
                 else if(jo.ContainsKey("event") && jo["event"].ToString().Equals("CHECK"))
                 {
-                    JObject position = (JObject)JsonConvert.DeserializeObject(jo["position"].ToString());
+                    /*JObject position = (JObject)JsonConvert.DeserializeObject(jo["position"].ToString());
                     Dictionary<string, object> dictionary = new Dictionary<string, object>();
                     dictionary.Add("event", "UI");
                     dictionary.Add("data", new Dictionary<string, object>
@@ -122,7 +128,34 @@ namespace ChromeAutomation
                                 }
                             });
                     // Console.WriteLine("发送消息给客户端:" + JsonConvert.SerializeObject(dictionary));
-                    SendMessage(JsonConvert.SerializeObject(dictionary));
+                    SendMessage(JsonConvert.SerializeObject(dictionary));*/
+                    System.Drawing.Point point = new System.Drawing.Point(-1, -1);
+                    ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
+                    Form1.GetPhysicalCursorPos(ref cursorPoint);
+                    System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
+                    Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
+                    bool flag4 = CureentSocketBehavior != null;
+                    Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
+                    if (flag4)
+                    {
+                        int x = point2.X;
+                        int y = point2.Y;
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("event", "UI");
+                        dictionary.Add("data", new Dictionary<string, object>
+                            {
+                                {
+                                    "x",
+                                    x
+                                },
+                                {
+                                    "y",
+                                    y
+                                }
+                            });
+                        Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
+                        SendMessage(JsonConvert.SerializeObject(dictionary));
+                    }
                 }
             }
 
@@ -285,6 +318,44 @@ namespace ChromeAutomation
             }
         }
 
+        private Thread selectThread = null;
+
+
+        private void RealMousePosition()
+        {
+            System.Drawing.Point point = new System.Drawing.Point(-1, -1);
+            while (true)
+            {
+                ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
+                Form1.GetPhysicalCursorPos(ref cursorPoint);
+                System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
+                Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
+                bool flag4 = CureentSocketBehavior != null;
+                Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
+                if (flag4)
+                {
+                    int x = point2.X;
+                    int y = point2.Y;
+                    Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                    dictionary.Add("event", "UI");
+                    dictionary.Add("data", new Dictionary<string, object>
+                            {
+                                {
+                                    "x",
+                                    x
+                                },
+                                {
+                                    "y",
+                                    y
+                                }
+                            });
+                    Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
+                    Form1.CureentSocketBehavior.SendMessage(JsonConvert.SerializeObject(dictionary));
+                }
+                Thread.Sleep(1000);
+            }
+        }
+
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
@@ -306,6 +377,10 @@ namespace ChromeAutomation
             this.Location = p;
             this.TopMost = true;
             this.ControlBox = false;
+
+            this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
+            this.selectThread.IsBackground = true;
+            this.selectThread.Start();
             // websocket
             WebSocketServer webSocketServer = new WebSocketServer("ws://127.0.0.1:63360");
             string uri = "/chrome";
