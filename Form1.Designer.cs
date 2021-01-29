@@ -324,42 +324,48 @@ namespace ChromeAutomation
         private KeyEventHandler myKeyEventHandeler = null;//按键钩子
         private KeyboardHook k_hook = new KeyboardHook();
 
+        private Object o = new Object();
+
         private void hook_KeyDown(object sender, KeyEventArgs e)
         {
-            //  这里写具体实现
-            Console.WriteLine("按下按键" + e.KeyValue);
-            if (e.KeyValue == 162)
+            lock (o)
             {
-                // add
-                try
+                //  这里写具体实现
+                Console.WriteLine("按下按键" + e.KeyValue);
+                if (e.KeyValue == 162)
                 {
-                    string url = "http://localhost:63361/postChromeData";
-                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-                    req.Method = "POST";
-                    req.Timeout = 4000;//设置请求超时时间，单位为毫秒
-                    req.ContentType = "application/json";
-                    byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this.dictionary));
-                    req.ContentLength = data.Length;
-                    using (Stream reqStream = req.GetRequestStream())
+                    // add
+                    try
                     {
-                        reqStream.Write(data, 0, data.Length);
-                        reqStream.Close();
+                        string url = "http://localhost:63361/postChromeData";
+                        HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+                        req.Method = "POST";
+                        req.Timeout = 4000;//设置请求超时时间，单位为毫秒
+                        req.ContentType = "application/json";
+                        byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this.dictionary));
+                        req.ContentLength = data.Length;
+                        using (Stream reqStream = req.GetRequestStream())
+                        {
+                            reqStream.Write(data, 0, data.Length);
+                            reqStream.Close();
+                            // 关闭
+                            this.Close();
+                            Application.Exit();
+                        }
+                    }
+                    catch (Exception)
+                    {
                         // 关闭
                         this.Close();
                         Application.Exit();
                     }
                 }
-                catch (Exception)
+                else if (e.KeyValue == 27)
                 {
                     // 关闭
                     this.Close();
                     Application.Exit();
                 }
-            }else if (e.KeyValue == 27)
-            {
-                // 关闭
-                this.Close();
-                Application.Exit();
             }
         }
 
