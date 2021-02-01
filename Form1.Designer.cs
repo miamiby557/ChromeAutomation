@@ -284,7 +284,8 @@ namespace ChromeAutomation
                         Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
                         string base64FromImage = ImageUtil.GetBase64FromImage(image);
                         dictionary.Add("screenShot", base64FromImage);
-
+                        DeleteObject(this.Pen);
+                        DeleteObject(this.PreviousPen);
                         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                         //连接服务器
                         socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 10083));
