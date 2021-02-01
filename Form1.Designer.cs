@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -337,7 +338,7 @@ namespace ChromeAutomation
                     // add
                     try
                     {
-                        string url = "http://localhost:63361/postChromeData";
+                        /*string url = "http://localhost:63361/postChromeData";
                         HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
                         req.Method = "POST";
                         req.Timeout = 4000;//设置请求超时时间，单位为毫秒
@@ -351,7 +352,13 @@ namespace ChromeAutomation
                             // 关闭
                             this.Close();
                             Application.Exit();
-                        }
+                        }*/
+                        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                        //连接服务器
+                        socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 10083));
+                        dictionary.Add("dataType", "CHROME_UIA");
+                        socket.Send(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dictionary)));
+                        socket.Close();
                     }
                     catch (Exception)
                     {
