@@ -63,6 +63,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="IHTML.cs" />
+    <Compile Include="ImageUtil.cs" />
     <Compile Include="KeyboardHook.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

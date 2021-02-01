@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -96,7 +97,7 @@ namespace ChromeAutomation
                     Console.WriteLine("来自客户端的xpath消息:" + e.Data.ToString());
                     try
                     {
-                        IHTML iHTML = JsonConvert.DeserializeObject<IHTML>(e.Data.ToString());
+                        IHTML iHTML = JsonConvert.DeserializeObject<IHTML>(jo["data"].ToString());
                         int left = iHTML.left;
                         int top = iHTML.top;
                         int width = iHTML.width;
@@ -108,6 +109,7 @@ namespace ChromeAutomation
                         dictionary.Add("value", iHTML.value);
                         dictionary.Add("xpath", iHTML.xpath);
                         dictionary.Add("full_xpath", iHTML.full_xpath);
+                        Console.WriteLine("OnMessage:" + (left, top, width, height));
                         MessageCallback(left, top, width, height, dictionary);
                     }
                     catch (Exception)
@@ -122,56 +124,6 @@ namespace ChromeAutomation
                 }
                 else if(jo.ContainsKey("event") && jo["event"].ToString().Equals("CHECK"))
                 {
-                    /*JObject position = (JObject)JsonConvert.DeserializeObject(jo["position"].ToString());
-                    Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                    dictionary.Add("event", "UI");
-                    dictionary.Add("data", new Dictionary<string, object>
-                            {
-                                {
-                                    "x",
-                                    position["x"]
-                                },
-                                {
-                                    "y",
-                                    position["y"]
-                                }
-                            });
-                    // Console.WriteLine("发送消息给客户端:" + JsonConvert.SerializeObject(dictionary));
-                    SendMessage(JsonConvert.SerializeObject(dictionary));*/
-                    /*System.Drawing.Point point = new System.Drawing.Point(-1, -1);
-                    ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
-                    Form1.GetPhysicalCursorPos(ref cursorPoint);
-                    System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
-                    Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
-                    bool flag4 = CureentSocketBehavior != null;
-                    System.Windows.Point point3 = new System.Windows.Point((double)point2.X, (double)point2.Y);
-                    Form1.selectedElement = AutomationElement.FromPoint(point3);
-                    AutomationElement.AutomationElementInformation current = Form1.selectedElement.Current;
-                    IntPtr hWnd = Form1.WindowFromPoint(point3);
-                    StringBuilder stringBuilder = new StringBuilder(256);
-                    Form1.GetClassName(hWnd, stringBuilder, stringBuilder.Capacity);
-                    AutomationElement.AutomationElementInformation current2 = Form1.selectedElement.Current;
-                    Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
-                    if (flag4)
-                    {
-                        int x = point2.X;
-                        int y = point2.Y;
-                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                        dictionary.Add("event", "UI");
-                        dictionary.Add("data", new Dictionary<string, object>
-                            {
-                                {
-                                    "x",
-                                    x
-                                },
-                                {
-                                    "y",
-                                    y
-                                }
-                            });
-                        Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
-                        SendMessage(JsonConvert.SerializeObject(dictionary));
-                    }*/
                     System.Drawing.Point point = new System.Drawing.Point(-1, -1);
                     ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
                     Form1.GetPhysicalCursorPos(ref cursorPoint);
@@ -241,18 +193,8 @@ namespace ChromeAutomation
 
         public void DrawRect(int left, int top, int width, int height, Dictionary<string, object> dictionary)
         {
-            /*Graphics graphics = this.CreateGraphics();
-            Pen mypen = new Pen(Color.Red, 3);//设置画笔属性
-            graphics.DrawRectangle(mypen, 100, 100, 50, 50);//按按钮画一个矩形*/
             // 回调实现方法
             Console.WriteLine("DrawRect:" + (left, top, width, height));
-            /*base.Location = new System.Drawing.Point(left, top);
-            base.Size = new System.Drawing.Size(width, height);
-            base.Visible = true;*/
-            /*Form1.Rectangle(this.hDC, left, top, width, height);*/
-            /*Form1.Rectangle(this.hDC, 200, 300, 400, 250);*/
-            // (964, 266, 53, 53)
-            /*Form1.Rectangle(this.hDC, 964, 266+53, 964+53, 266);*/
             this.left = left;
             this.top = top;
             this.width = width;
@@ -335,34 +277,33 @@ namespace ChromeAutomation
                 Console.WriteLine("按下按键" + e.KeyValue);
                 if (e.KeyValue == 162)
                 {
-                    // add
                     try
                     {
-                        /*string url = "http://localhost:63361/postChromeData";
-                        HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-                        req.Method = "POST";
-                        req.Timeout = 4000;//设置请求超时时间，单位为毫秒
-                        req.ContentType = "application/json";
-                        byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this.dictionary));
-                        req.ContentLength = data.Length;
-                        using (Stream reqStream = req.GetRequestStream())
-                        {
-                            reqStream.Write(data, 0, data.Length);
-                            reqStream.Close();
-                            // 关闭
-                            this.Close();
-                            Application.Exit();
-                        }*/
+                        // 截图
+                        Form1.Rectangle(this.hDC, left, top + height, left + width, top);
+                        Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
+                        string base64FromImage = ImageUtil.GetBase64FromImage(image);
+                        dictionary.Add("screenShot", base64FromImage);
+
                         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                         //连接服务器
                         socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 10083));
                         dictionary.Add("dataType", "CHROME_UIA");
                         socket.Send(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dictionary)));
                         socket.Close();
+                        // 关闭
+                        stopListen();
+                        Thread.Sleep(400);
+                        this.Timer1.Stop();
+                        this.Close();
+                        Application.Exit();
                     }
                     catch (Exception)
                     {
                         // 关闭
+                        stopListen();
+                        Thread.Sleep(400);
+                        this.Timer1.Stop();
                         this.Close();
                         Application.Exit();
                     }
@@ -370,10 +311,22 @@ namespace ChromeAutomation
                 else if (e.KeyValue == 27)
                 {
                     // 关闭
+                    stopListen();
+                    this.Timer1.Stop();
                     this.Close();
                     Application.Exit();
                 }
             }
+        }
+
+        // 保存截图
+        private Bitmap SaveImage(int x, int y, int width, int height)
+        {
+            Bitmap bitmap = new Bitmap(width, height);
+            Graphics graphics = Graphics.FromImage(bitmap);
+            graphics.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
+            bitmap.Save("img.png", ImageFormat.Png);
+            return bitmap;
         }
 
         public void stopListen()
@@ -383,51 +336,6 @@ namespace ChromeAutomation
                 k_hook.KeyDownEvent -= myKeyEventHandeler;//取消按键事件
                 myKeyEventHandeler = null;
                 k_hook.Stop();//关闭键盘钩子
-            }
-        }
-
-        private Thread selectThread = null;
-
-
-        private void RealMousePosition()
-        {
-            while (true)
-            {
-                System.Drawing.Point point = new System.Drawing.Point(-1, -1);
-                ChromeAutomation.CursorPoint cursorPoint = default(ChromeAutomation.CursorPoint);
-                Form1.GetPhysicalCursorPos(ref cursorPoint);
-                System.Drawing.Point point2 = new System.Drawing.Point(cursorPoint.X, cursorPoint.Y);
-                Console.WriteLine("cursorPoint：x:" + cursorPoint.X.ToString() + ",y:" + cursorPoint.Y.ToString());
-                bool flag4 = Form1.CureentSocketBehavior != null;
-                System.Windows.Point point3 = new System.Windows.Point((double)point2.X, (double)point2.Y);
-                Form1.selectedElement = AutomationElement.FromPoint(point3);
-                AutomationElement.AutomationElementInformation current = Form1.selectedElement.Current;
-                IntPtr hWnd = Form1.WindowFromPoint(point3);
-                StringBuilder stringBuilder = new StringBuilder(256);
-                Form1.GetClassName(hWnd, stringBuilder, stringBuilder.Capacity);
-                AutomationElement.AutomationElementInformation current2 = Form1.selectedElement.Current;
-                Console.WriteLine("Form1.CureentSocketBehavior:" + flag4);
-                if (flag4)
-                {
-                    int x = point2.X;
-                    int y = point2.Y;
-                    Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                    dictionary.Add("event", "UI");
-                    dictionary.Add("data", new Dictionary<string, object>
-                            {
-                                {
-                                    "x",
-                                    x
-                                },
-                                {
-                                    "y",
-                                    y
-                                }
-                            });
-                    Console.WriteLine("鼠标坐标：x:" + x.ToString() + ",y:" + y.ToString());
-                    Form1.CureentSocketBehavior.SendMessage(JsonConvert.SerializeObject(dictionary));
-                }
-                Thread.Sleep(1000);
             }
         }
 
@@ -463,10 +371,6 @@ namespace ChromeAutomation
             myKeyEventHandeler = new KeyEventHandler(hook_KeyDown);
             k_hook.KeyDownEvent += myKeyEventHandeler;//钩住键按下
             k_hook.Start();//安装键盘钩子
-
-            /*this.selectThread = new Thread(new ThreadStart(this.RealMousePosition));
-            this.selectThread.IsBackground = true;
-            this.selectThread.Start();*/
         }
 
         #endregion
