@@ -281,9 +281,10 @@ namespace ChromeAutomation
                     {
                         // 截图
                         Form1.Rectangle(this.hDC, left, top + height, left + width, top);
-                        Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
-                        string base64FromImage = ImageUtil.GetBase64FromImage(image);
-                        dictionary.Add("screenShot", base64FromImage);
+                        // Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
+                        String imagePath = this.SaveImage(left - 50, top - 50, width + 100, height + 100);
+                        // string base64FromImage = ImageUtil.GetBase64FromImage(image);
+                        dictionary.Add("screenShot", imagePath);
                         DeleteObject(this.Pen);
                         DeleteObject(this.PreviousPen);
                         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -321,13 +322,14 @@ namespace ChromeAutomation
         }
 
         // 保存截图
-        private Bitmap SaveImage(int x, int y, int width, int height)
+        private String SaveImage(int x, int y, int width, int height)
         {
             Bitmap bitmap = new Bitmap(width, height);
             Graphics graphics = Graphics.FromImage(bitmap);
             graphics.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
-            bitmap.Save("img.png", ImageFormat.Png);
-            return bitmap;
+            String imagePath = Directory.GetCurrentDirectory() + "\\img.png";
+            bitmap.Save(imagePath, ImageFormat.Png);
+            return imagePath;
         }
 
         public void stopListen()
