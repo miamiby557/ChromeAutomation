@@ -277,22 +277,28 @@ namespace ChromeAutomation
                 Console.WriteLine("按下按键" + e.KeyValue);
                 if (e.KeyValue == 162)
                 {
+                    // 截图
+                    Form1.Rectangle(this.hDC, left, top + height, left + width, top);
+                    // Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
+                    String imagePath = this.SaveImage(left, top, width, height);
+                    // string base64FromImage = ImageUtil.GetBase64FromImage(image);
+                    dictionary.Add("screenShot", imagePath);
+                    dictionary.Add("x", left);
+                    dictionary.Add("y", top);
+                    dictionary.Add("w", width+left);
+                    dictionary.Add("h", height+top);
+                    Console.WriteLine("imagePath", imagePath);
+                    DeleteObject(this.Pen);
+                    DeleteObject(this.PreviousPen);
+                    Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    //连接服务器
+                    socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 10083));
+                    dictionary.Add("dataType", "CHROME_UIA");
+                    socket.Send(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dictionary)));
+                    socket.Close();
                     try
                     {
-                        // 截图
-                        Form1.Rectangle(this.hDC, left, top + height, left + width, top);
-                        // Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
-                        String imagePath = this.SaveImage(left - 50, top - 50, width + 100, height + 100);
-                        // string base64FromImage = ImageUtil.GetBase64FromImage(image);
-                        dictionary.Add("screenShot", imagePath);
-                        DeleteObject(this.Pen);
-                        DeleteObject(this.PreviousPen);
-                        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        //连接服务器
-                        socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 10083));
-                        dictionary.Add("dataType", "CHROME_UIA");
-                        socket.Send(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dictionary)));
-                        socket.Close();
+                        
                         // 关闭
                         stopListen();
                         Thread.Sleep(400);
