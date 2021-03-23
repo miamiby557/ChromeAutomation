@@ -279,7 +279,8 @@ namespace ChromeAutomation
                 {
                     // 截图
                     Form1.Rectangle(this.hDC, left, top + height, left + width, top);
-                    // Bitmap image = this.SaveImage(left-50, top-50,  width+100, height+100);
+                    MouseHookHelper.SetCursorPos(0, 0);
+                    Thread.Sleep(150);
                     String imagePath = this.SaveImage(left, top, width, height);
                     // string base64FromImage = ImageUtil.GetBase64FromImage(image);
                     dictionary.Add("screenShot", imagePath);

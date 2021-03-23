@@ -68,6 +68,7 @@
     <Compile Include="IHTML.cs" />
     <Compile Include="ImageUtil.cs" />
     <Compile Include="KeyboardHook.cs" />
+    <Compile Include="MouseHookHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
